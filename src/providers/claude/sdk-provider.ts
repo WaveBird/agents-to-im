@@ -837,6 +837,13 @@ export function handleMessage(
     case 'result': {
       state.hasReceivedResult = true;
       if (msg.subtype === 'success') {
+        // Fallback: some third-party model gateways (e.g. GLM via aic.byd.com)
+        // do not emit content_block_delta / text_delta stream events.
+        // Without this, assistant text is captured but never emitted,
+        // resulting in an empty response to the IM channel.
+        if (!state.hasStreamedText && state.lastAssistantText) {
+          emitCanonicalTurnEvent(controller, { type: 'text', data: state.lastAssistantText });
+        }
         if (msg.is_error) {
           const errorText = [
             typeof msg.result === 'string' ? msg.result.trim() : '',
